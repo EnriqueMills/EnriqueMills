@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Mills Bucks</title>
+<meta name="description" content="Track Mills Bucks — a reward currency for kids.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mills Bucks">
+<meta name="theme-color" content="#12160f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+:root{
+  --bg:#f6f5f0; --bg2:#ffffff; --ink:#171a14; --ink2:#5d6356; --line:#e2e2d8;
+  --accent:#2f7d4f; --accent-ink:#ffffff;
+  --earn:#2f7d4f; --spend:#b4553a; --chip:#eceade;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);
+  --radius:16px;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#12160f; --bg2:#1c211a; --ink:#f0f1ea; --ink2:#9aa292; --line:#2e3429;
+    --accent:#5cc281; --accent-ink:#0d1410; --earn:#5cc281; --spend:#e08a6c; --chip:#262c22;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased; overscroll-behavior-y:none;
+  padding-bottom:calc(72px + var(--safe-b));
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer}
+.wrap{max-width:620px;margin:0 auto;padding:0 16px}
+
+/* ---------- header / balance ---------- */
+.hero{
+  background:linear-gradient(175deg,var(--bg2),var(--bg));
+  border-bottom:1px solid var(--line);
+  padding-top:calc(var(--safe-t) + 8px); padding-bottom:14px;
+}
+.kidrow{display:flex;gap:8px;align-items:center;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+.kidrow::-webkit-scrollbar{display:none}
+.kidchip{
+  flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;
+  background:var(--chip);color:var(--ink2);font-size:14px;font-weight:600;white-space:nowrap;
+  border:1px solid transparent;
+}
+.kidchip[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.bal{text-align:center}
+.bal .num{
+  font-size:54px;line-height:1;font-weight:800;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;display:block;
+}
+.bal .unit{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);margin-top:6px}
+.bal .usd{font-size:17px;font-weight:600;color:var(--ink2);margin-top:4px;font-variant-numeric:tabular-nums}
+.bal.neg .num{color:var(--spend)}
+.statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stat{
+  background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:7px 6px;
+  font-size:10.5px;line-height:1.25;color:var(--ink2);text-align:center;
+}
+.stat b{display:block;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums;margin-bottom:2px}
+
+/* ---------- generic ---------- */
+h2.sec{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);margin:22px 0 8px}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.row{
+  display:flex;align-items:center;gap:12px;padding:13px 14px;width:100%;text-align:left;
+  border-bottom:1px solid var(--line);
+}
+.row:last-child{border-bottom:0}
+.row:active{background:var(--chip)}
+.row .emo{font-size:22px;width:30px;text-align:center;flex:0 0 auto}
+.row .txt{flex:1 1 auto;min-width:0;display:block}
+.row .t{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .s{display:block;font-size:12.5px;color:var(--ink2);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.amt{
+  flex:0 0 auto;font-weight:700;font-variant-numeric:tabular-nums;font-size:15px;
+  padding:5px 10px;border-radius:9px;background:var(--chip);margin-left:4px;
+}
+.amt.earn{color:var(--earn)} .amt.spend{color:var(--spend)}
+.empty{text-align:center;color:var(--ink2);padding:40px 20px;font-size:14.5px}
+.empty .big{font-size:34px;display:block;margin-bottom:10px}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  padding:14px;border-radius:13px;background:var(--accent);color:var(--accent-ink);
+  font-weight:700;font-size:16px;
+}
+.btn.ghost{background:var(--bg2);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--spend);border:1px solid var(--line)}
+.btn:active{transform:scale(.985)}
+.btnrow{display:flex;gap:10px;margin-top:12px}
+
+/* ---------- search ---------- */
+.search{
+  width:100%;padding:12px 14px;border-radius:13px;border:1px solid var(--line);
+  background:var(--bg2);margin:14px 0 2px;
+}
+.search::placeholder{color:var(--ink2)}
+
+/* ---------- tab bar ---------- */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  display:flex;background:color-mix(in srgb,var(--bg2) 88%,transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);
+  border-top:1px solid var(--line);padding-bottom:var(--safe-b);
+}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 7px;color:var(--ink2);font-size:10.5px;font-weight:600}
+.tab .ic{font-size:20px;line-height:1}
+.tab[aria-selected="true"]{color:var(--accent)}
+
+/* ---------- sheet ---------- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:51;background:var(--bg2);
+  border-radius:22px 22px 0 0;padding:8px 16px calc(18px + var(--safe-b));
+  transform:translateY(102%);visibility:hidden;pointer-events:none;
+  transition:transform .26s cubic-bezier(.32,.72,0,1),visibility 0s linear .26s;
+  max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.sheet.on{transform:translateY(0);visibility:visible;pointer-events:auto;transition-delay:0s}
+.grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:6px auto 12px}
+.sheet h3{margin:0 0 4px;font-size:20px;letter-spacing:-.01em}
+.sheet .sub{color:var(--ink2);font-size:13.5px;margin:0 0 16px}
+.field{display:block;margin:12px 0}
+.field span{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);margin-bottom:6px}
+.field input,.field select,.field textarea{
+  width:100%;padding:12px 13px;border-radius:12px;border:1px solid var(--line);background:var(--bg);
+}
+.stepper{display:flex;align-items:center;gap:14px;justify-content:center;margin:6px 0 2px}
+.stepper button{width:46px;height:46px;border-radius:50%;background:var(--chip);font-size:24px;font-weight:600;display:grid;place-items:center}
+.stepper .q{font-size:30px;font-weight:800;min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
+.preview{
+  text-align:center;background:var(--chip);border-radius:13px;padding:12px;margin:14px 0 2px;
+  font-size:14px;color:var(--ink2);
+}
+.preview b{font-size:22px;color:var(--ink);display:block;font-variant-numeric:tabular-nums}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;left:16px;right:16px;bottom:calc(78px + var(--safe-b));z-index:60;
+  background:var(--ink);color:var(--bg);border-radius:14px;padding:13px 15px;
+  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
+  transform:translateY(200%);opacity:0;pointer-events:none;visibility:hidden;
+  transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .2s linear,visibility 0s linear .3s;
+  max-width:588px;margin:0 auto;
+}
+.toast.on{transform:translateY(0);opacity:1;pointer-events:auto;visibility:visible;transition-delay:0s}
+.toast .m{flex:1;font-size:14.5px;font-weight:600}
+.toast button{color:var(--bg);font-weight:800;text-decoration:underline;font-size:14.5px;flex:0 0 auto}
+.warn{background:color-mix(in srgb,var(--spend) 14%,transparent);border:1px solid color-mix(in srgb,var(--spend) 40%,transparent);
+  color:var(--spend);border-radius:12px;padding:10px 12px;font-size:13.5px;margin:12px 0 0;font-weight:600}
+.daylabel{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin:20px 0 8px}
+.hint{font-size:12.5px;color:var(--ink2);margin:8px 2px 0;line-height:1.5}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="kidrow" id="kidrow"></div>
+    <div class="bal" id="bal">
+      <span class="num">0</span>
+      <div class="unit">Mills Bucks</div>
+      <div class="usd">$0.00</div>
+    </div>
+    <div class="statrow" id="statrow"></div>
+  </div>
+</div>
+
+<main class="wrap" id="view"></main>
+
+<nav class="tabbar" id="tabbar"></nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"><div class="grab"></div><div id="sheetbody"></div></div>
+<div class="toast" id="toast"><span class="m" id="toastmsg"></span><button id="toastact">Undo</button></div>
+
+<script id="default-catalog" type="application/json">{"rate":2.25,"categories":[{"id":"reading","name":"Reading","emoji":"📚"},{"id":"academics","name":"School","emoji":"🎓"},{"id":"sports","name":"Sports & Activities","emoji":"⚽"},{"id":"home","name":"Home & Character","emoji":"🏡"}],"earnRules":[{"id":"r_story","title":"Read a short storybook","amount":1,"category":"reading","emoji":"📖"},{"id":"r_readaloud","title":"Read aloud 20 minutes","amount":1,"category":"reading","emoji":"🗣️"},{"id":"r_chapter","title":"Read a chapter book chapter","amount":1.5,"category":"reading","emoji":"📗"},{"id":"r_finishbook","title":"Finish a chapter book","amount":5,"category":"reading","emoji":"🏁"},{"id":"r_bookreport","title":"Write a book report","amount":3,"category":"reading","emoji":"✍️"},{"id":"a_assign_a","title":"A on an assignment","amount":1.5,"category":"academics","emoji":"🅰️"},{"id":"a_assign_b","title":"B on an assignment","amount":0.75,"category":"academics","emoji":"🅱️"},{"id":"a_test_a","title":"A on a test","amount":4,"category":"academics","emoji":"📝"},{"id":"a_test_b","title":"B on a test","amount":2,"category":"academics","emoji":"📄"},{"id":"a_homework","title":"Homework all week, no nagging","amount":3,"category":"academics","emoji":"✅"},{"id":"a_practice","title":"Study/math practice 20 min","amount":1,"category":"academics","emoji":"✏️"},{"id":"a_report_a","title":"A on report card (per subject)","amount":10,"category":"academics","emoji":"🌟"},{"id":"a_attendance","title":"Perfect attendance (term)","amount":8,"category":"academics","emoji":"📅"},{"id":"s_practice","title":"Attend practice","amount":0.5,"category":"sports","emoji":"🏃"},{"id":"s_game","title":"Play a game","amount":1,"category":"sports","emoji":"🥅"},{"id":"s_win","title":"Win a game","amount":2,"category":"sports","emoji":"💪"},{"id":"s_mvp","title":"Game ball / team MVP","amount":10,"category":"sports","emoji":"🏅"},{"id":"s_tournament","title":"Win a tournament","amount":25,"category":"sports","emoji":"🥈"},{"id":"s_championship","title":"Win a championship","amount":100,"category":"sports","emoji":"🏆"},{"id":"h_chores","title":"Chores all week, no reminders","amount":2,"category":"home","emoji":"🧹"},{"id":"h_room","title":"Room clean all week","amount":1.5,"category":"home","emoji":"🛏️"},{"id":"h_helping","title":"Helped without being asked","amount":1,"category":"home","emoji":"🤝"},{"id":"h_kindness","title":"Caught being kind","amount":1,"category":"home","emoji":"❤️"}],"spendRules":[{"id":"p_cash1","title":"Cash out 1 Mills Buck","amount":1,"emoji":"💵"},{"id":"p_cash5","title":"Cash out 5 Mills Bucks","amount":5,"emoji":"💰"},{"id":"p_screen30","title":"30 min extra screen time","amount":1,"emoji":"📱"},{"id":"p_screen60","title":"1 hour extra screen time","amount":2,"emoji":"🎮"},{"id":"p_dinner","title":"Pick dinner","amount":2,"emoji":"🍕"},{"id":"p_movie","title":"Pick movie night","amount":2,"emoji":"🎬"},{"id":"p_latenight","title":"Stay up 30 min late","amount":2,"emoji":"🌙"},{"id":"p_treat","title":"Ice cream / treat run","amount":3,"emoji":"🍦"},{"id":"p_outing","title":"Park / arcade trip","amount":6,"emoji":"🎡"},{"id":"p_smalltoy","title":"Small toy (~$20)","amount":9,"emoji":"🧸"},{"id":"p_bigtoy","title":"Big toy / game (~$50)","amount":22,"emoji":"🎁"},{"id":"p_dayout","title":"Day out, kid's choice","amount":30,"emoji":"🌞"}]}</script>
+<script>
+(function(){
+"use strict";
+
+/* ============================ storage ============================ */
+var KEY = "millsbucks.v1";
+var DEFAULTS = JSON.parse(document.getElementById("default-catalog").textContent);
+
+function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+
+function freshState(){
+  return {
+    v: 1,
+    rate: DEFAULTS.rate,
+    kids: [{ id: uid(), name: "My Kid", emoji: "⭐" }],
+    activeKid: null,
+    entries: [],
+    earnRules: DEFAULTS.earnRules.map(function(r){ return Object.assign({}, r); }),
+    spendRules: DEFAULTS.spendRules.map(function(r){ return Object.assign({}, r); }),
+    categories: DEFAULTS.categories.map(function(c){ return Object.assign({}, c); })
+  };
+}
+
+var S;
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(raw){ S = JSON.parse(raw); }
+  }catch(e){ /* private mode / corrupt: fall through to fresh */ }
+  if(!S || typeof S !== "object" || !Array.isArray(S.kids) || !S.kids.length){ S = freshState(); }
+  // repair any missing pieces from older/partial saves
+  if(typeof S.rate !== "number" || !isFinite(S.rate) || S.rate <= 0) S.rate = DEFAULTS.rate;
+  if(!Array.isArray(S.entries)) S.entries = [];
+  if(!Array.isArray(S.earnRules) || !S.earnRules.length) S.earnRules = freshState().earnRules;
+  if(!Array.isArray(S.spendRules) || !S.spendRules.length) S.spendRules = freshState().spendRules;
+  if(!Array.isArray(S.categories) || !S.categories.length) S.categories = freshState().categories;
+  if(!S.activeKid || !S.kids.some(function(k){ return k.id === S.activeKid; })) S.activeKid = S.kids[0].id;
+  save();
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch(e){ /* storage blocked: app still works for this session */ }
+}
+
+/* ============================ helpers ============================ */
+function mb(n){
+  var r = Math.round(n * 100) / 100;
+  return String(r).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+}
+function usd(n){
+  var v = Math.round(n * S.rate * 100) / 100;
+  var neg = v < 0;
+  return (neg ? "-$" : "$") + Math.abs(v).toFixed(2);
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+  });
+}
+function myEntries(){
+  return S.entries.filter(function(e){ return e.kid === S.activeKid; });
+}
+function balance(){
+  return myEntries().reduce(function(t,e){ return t + (e.kind === "earn" ? e.amount : -e.amount); }, 0);
+}
+function kidCount(id){ return S.entries.filter(function(e){ return e.kid === id; }).length; }
+function kidBalance(id){
+  return S.entries.reduce(function(t,e){
+    if(e.kid !== id) return t;
+    return t + (e.kind === "earn" ? e.amount : -e.amount);
+  }, 0);
+}
+function monthStart(){ var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); }
+function sumSince(kind, ts){
+  return myEntries().reduce(function(t,e){
+    return t + (e.kind === kind && e.ts >= ts ? e.amount : 0);
+  }, 0);
+}
+function activeKid(){
+  var k = S.kids.filter(function(x){ return x.id === S.activeKid; })[0];
+  return k || S.kids[0];
+}
+function dayLabel(ts){
+  var d = new Date(ts), n = new Date();
+  var same = function(a,b){ return a.toDateString() === b.toDateString(); };
+  if(same(d,n)) return "Today";
+  var y = new Date(n.getTime() - 86400000);
+  if(same(d,y)) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric",
+    year: d.getFullYear() === n.getFullYear() ? undefined : "numeric" });
+}
+function buzz(ms){ if(navigator.vibrate){ try{ navigator.vibrate(ms || 12); }catch(e){} } }
+
+/* ============================ mutations ============================ */
+function addEntry(kind, title, amount, emoji, note){
+  var e = {
+    id: uid(), kid: S.activeKid, ts: Date.now(),
+    kind: kind, title: title, amount: amount,
+    emoji: emoji || (kind === "earn" ? "⭐" : "🎁"),
+    note: note || ""
+  };
+  S.entries.push(e);
+  save(); render(); buzz(14);
+  toast((kind === "earn" ? "+" : "−") + mb(amount) + " MB · " + title, "Undo", function(){
+    S.entries = S.entries.filter(function(x){ return x.id !== e.id; });
+    save(); render();
+  });
+  return e;
+}
+function deleteEntry(id){
+  var e = S.entries.filter(function(x){ return x.id === id; })[0];
+  if(!e) return;
+  S.entries = S.entries.filter(function(x){ return x.id !== id; });
+  save(); render();
+  toast("Deleted · " + e.title, "Undo", function(){ S.entries.push(e); save(); render(); });
+}
+
+/* ============================ toast ============================ */
+var toastTimer = null;
+function toast(msg, actionLabel, fn){
+  var el = document.getElementById("toast");
+  var btn = document.getElementById("toastact");
+  document.getElementById("toastmsg").textContent = msg;
+  if(fn){
+    btn.style.display = "";
+    btn.textContent = actionLabel;
+    btn.onclick = function(){ fn(); hideToast(); };
+  } else { btn.style.display = "none"; }
+  el.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 4200);
+}
+function hideToast(){ document.getElementById("toast").classList.remove("on"); }
+
+/* ============================ sheet ============================ */
+function openSheet(html, after){
+  document.getElementById("sheetbody").innerHTML = html;
+  document.getElementById("sheet").classList.add("on");
+  document.getElementById("scrim").classList.add("on");
+  if(after) after();
+}
+function closeSheet(){
+  document.getElementById("sheet").classList.remove("on");
+  document.getElementById("scrim").classList.remove("on");
+}
+document.getElementById("scrim").addEventListener("click", closeSheet);
+
+/* ============================ tabs ============================ */
+var TABS = [
+  { id:"home",    label:"Home",    ic:"🏠" },
+  { id:"earn",    label:"Earn",    ic:"➕" },
+  { id:"spend",   label:"Spend",   ic:"🎁" },
+  { id:"history", label:"History", ic:"📜" },
+  { id:"settings",label:"Settings",ic:"⚙️" }
+];
+var tab = "home";
+
+/* ============================ render ============================ */
+function render(){
+  renderKids(); renderBalance(); renderTabs();
+  var v = document.getElementById("view");
+  v.innerHTML = ({ home:viewHome, earn:viewEarn, spend:viewSpend, history:viewHistory, settings:viewSettings })[tab]();
+  wire(v);
+}
+
+function renderKids(){
+  var el = document.getElementById("kidrow");
+  if(S.kids.length < 2){ el.innerHTML = ""; el.style.display = "none"; return; }
+  el.style.display = "";
+  el.innerHTML = S.kids.map(function(k){
+    return '<button class="kidchip" role="tab" aria-selected="' + (k.id === S.activeKid) +
+      '" data-act="kid" data-id="' + k.id + '">' + esc(k.emoji) + " " + esc(k.name) + "</button>";
+  }).join("");
+}
+
+function renderBalance(){
+  var b = balance();
+  var el = document.getElementById("bal");
+  el.classList.toggle("neg", b < 0);
+  el.querySelector(".num").textContent = mb(b);
+  el.querySelector(".usd").textContent = usd(b) + " value";
+  var ms = monthStart();
+  var earned = sumSince("earn", ms), spent = sumSince("spend", ms);
+  var lifetime = myEntries().reduce(function(t,e){ return t + (e.kind === "earn" ? e.amount : 0); }, 0);
+  document.getElementById("statrow").innerHTML =
+    '<div class="stat"><b>+' + mb(earned) + "</b>earned this month</div>" +
+    '<div class="stat"><b>−' + mb(spent) + "</b>spent this month</div>" +
+    '<div class="stat"><b>' + mb(lifetime) + "</b>earned all time</div>";
+}
+
+function renderTabs(){
+  document.getElementById("tabbar").innerHTML = TABS.map(function(t){
+    return '<button class="tab" role="tab" aria-selected="' + (t.id === tab) + '" data-act="tab" data-id="' + t.id +
+      '"><span class="ic">' + t.ic + "</span>" + t.label + "</button>";
+  }).join("");
+}
+
+function entryRow(e, tappable){
+  var sub = dayLabel(e.ts) + " · " + new Date(e.ts).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+  if(e.note) sub += " · " + esc(e.note);
+  return "<" + (tappable ? 'button class="row" data-act="entry" data-id="' + e.id + '"' : 'div class="row"') + ">" +
+    '<span class="emo">' + esc(e.emoji) + "</span>" +
+    '<span class="txt"><span class="t">' + esc(e.title) + '</span><span class="s">' + sub + "</span></span>" +
+    '<span class="amt ' + e.kind + '">' + (e.kind === "earn" ? "+" : "−") + mb(e.amount) + "</span>" +
+    "</" + (tappable ? "button" : "div") + ">";
+}
+
+function viewHome(){
+  var recent = myEntries().sort(function(a,b){ return b.ts - a.ts; }).slice(0, 6);
+  // most-used rules for this kid, falling back to catalog order
+  var counts = {};
+  myEntries().forEach(function(e){ if(e.ruleId) counts[e.ruleId] = (counts[e.ruleId]||0) + 1; });
+  var quick = S.earnRules.slice().sort(function(a,b){
+    return (counts[b.id]||0) - (counts[a.id]||0);
+  }).slice(0, 5);
+
+  var h = '<h2 class="sec">Quick add</h2><div class="card">' +
+    quick.map(function(r){
+      return '<button class="row" data-act="earn" data-id="' + r.id + '">' +
+        '<span class="emo">' + esc(r.emoji) + '</span>' +
+        '<span class="txt"><span class="t">' + esc(r.title) + '</span><span class="s">' + usd(r.amount) + '</span></span>' +
+        '<span class="amt earn">+' + mb(r.amount) + "</span></button>";
+    }).join("") + "</div>" +
+    '<div class="btnrow"><button class="btn ghost" data-act="custom" data-kind="earn">➕ Custom earn</button>' +
+    '<button class="btn ghost" data-act="custom" data-kind="spend">🎁 Custom spend</button></div>' +
+    '<h2 class="sec">Recent</h2>';
+
+  if(!recent.length){
+    return h + '<div class="card"><div class="empty"><span class="big">💵</span>' +
+      "No Mills Bucks logged yet.<br>Tap something above to start.</div></div>";
+  }
+  return h + '<div class="card">' + recent.map(function(e){ return entryRow(e, true); }).join("") + "</div>";
+}
+
+function ruleList(rules, act, kindClass, sign){
+  return '<div class="card">' + rules.map(function(r){
+    return '<button class="row" data-act="' + act + '" data-id="' + r.id + '">' +
+      '<span class="emo">' + esc(r.emoji) + '</span>' +
+      '<span class="txt"><span class="t">' + esc(r.title) + '</span><span class="s">' + usd(r.amount) + '</span></span>' +
+      '<span class="amt ' + kindClass + '">' + sign + mb(r.amount) + "</span></button>";
+  }).join("") + "</div>";
+}
+
+var earnQuery = "";
+function viewEarn(){
+  var q = earnQuery.toLowerCase().trim();
+  var h = '<input class="search" id="earnsearch" placeholder="Search rewards…" value="' + esc(earnQuery) + '">' +
+    '<div class="btnrow"><button class="btn" data-act="custom" data-kind="earn">➕ Custom amount</button></div>';
+  var any = false;
+  S.categories.forEach(function(c){
+    var rs = S.earnRules.filter(function(r){
+      return r.category === c.id && (!q || r.title.toLowerCase().indexOf(q) >= 0);
+    });
+    if(!rs.length) return;
+    any = true;
+    h += '<h2 class="sec">' + c.emoji + " " + esc(c.name) + "</h2>" + ruleList(rs, "earn", "earn", "+");
+  });
+  var other = S.earnRules.filter(function(r){
+    return !S.categories.some(function(c){ return c.id === r.category; }) &&
+      (!q || r.title.toLowerCase().indexOf(q) >= 0);
+  });
+  if(other.length){ any = true; h += '<h2 class="sec">✨ Other</h2>' + ruleList(other, "earn", "earn", "+"); }
+  if(!any) h += '<div class="card"><div class="empty"><span class="big">🔍</span>Nothing matches “' + esc(earnQuery) + '”.</div></div>';
+  return h;
+}
+
+function viewSpend(){
+  var b = balance();
+  return '<h2 class="sec">Spend Mills Bucks</h2>' +
+    '<div class="preview">Available to spend<b>' + mb(b) + " MB · " + usd(b) + "</b></div>" +
+    '<div class="btnrow"><button class="btn" data-act="custom" data-kind="spend">🎁 Custom amount</button></div>' +
+    '<h2 class="sec">Rewards</h2>' + ruleList(S.spendRules, "spend", "spend", "−") +
+    '<p class="hint">Cash-out uses your rate of ' + usd(1) + " per Mills Buck. Change it in Settings.</p>";
+}
+
+var histFilter = "all";
+function viewHistory(){
+  var list = myEntries().filter(function(e){ return histFilter === "all" || e.kind === histFilter; })
+    .sort(function(a,b){ return b.ts - a.ts; });
+  var h = '<h2 class="sec">History</h2><div class="btnrow">' +
+    [["all","All"],["earn","Earned"],["spend","Spent"]].map(function(f){
+      return '<button class="btn ' + (histFilter === f[0] ? "" : "ghost") + '" data-act="filter" data-id="' + f[0] + '">' + f[1] + "</button>";
+    }).join("") + "</div>";
+  if(!list.length){
+    return h + '<div class="card" style="margin-top:14px"><div class="empty"><span class="big">📜</span>Nothing here yet.</div></div>';
+  }
+  var groups = [], cur = null;
+  list.forEach(function(e){
+    var d = dayLabel(e.ts);
+    if(!cur || cur.d !== d){ cur = { d:d, items:[] }; groups.push(cur); }
+    cur.items.push(e);
+  });
+  groups.forEach(function(g){
+    var net = g.items.reduce(function(t,e){ return t + (e.kind === "earn" ? e.amount : -e.amount); }, 0);
+    h += '<div class="daylabel">' + esc(g.d) + " · " + (net >= 0 ? "+" : "−") + mb(Math.abs(net)) + " MB</div>" +
+      '<div class="card">' + g.items.map(function(e){ return entryRow(e, true); }).join("") + "</div>";
+  });
+  h += '<p class="hint">Tap any entry to edit the note or delete it.</p>';
+  return h;
+}
+
+function viewSettings(){
+  var h = '<h2 class="sec">Exchange rate</h2><div class="card"><div class="row">' +
+    '<span class="emo">💵</span><span class="txt"><span class="t">1 Mills Buck</span>' +
+    '<span class="s">What one Mills Buck is worth in dollars</span></span>' +
+    '<input id="rate" class="amt" style="width:92px;text-align:right;border:1px solid var(--line)" ' +
+    'type="number" inputmode="decimal" step="0.05" min="0.01" value="' + S.rate + '"></div></div>';
+
+  h += '<h2 class="sec">Kids</h2><div class="card">' + S.kids.map(function(k){
+    return '<button class="row" data-act="editkid" data-id="' + k.id + '">' +
+      '<span class="emo">' + esc(k.emoji) + '</span><span class="txt"><span class="t">' + esc(k.name) + "</span>" +
+      '<span class="s">' + kidCount(k.id) + " entries \u00b7 " + mb(kidBalance(k.id)) + " MB</span></span>" +
+      '<span class="amt">›</span></button>';
+  }).join("") + "</div>" +
+  '<div class="btnrow"><button class="btn ghost" data-act="addkid">➕ Add a kid</button></div>';
+
+  h += '<h2 class="sec">Reward catalog</h2><div class="card">' +
+    '<button class="row" data-act="editrules" data-id="earn"><span class="emo">⭐</span>' +
+    '<span class="txt"><span class="t">Earning rules</span><span class="s">' + S.earnRules.length + " ways to earn</span></span>" +
+    '<span class="amt">›</span></button>' +
+    '<button class="row" data-act="editrules" data-id="spend"><span class="emo">🎁</span>' +
+    '<span class="txt"><span class="t">Spending rules</span><span class="s">' + S.spendRules.length + " rewards</span></span>" +
+    '<span class="amt">›</span></button></div>';
+
+  h += '<h2 class="sec">Data</h2><div class="card">' +
+    '<button class="row" data-act="export"><span class="emo">📤</span><span class="txt"><span class="t">Export backup</span>' +
+    '<span class="s">Download a JSON file of everything</span></span><span class="amt">›</span></button>' +
+    '<button class="row" data-act="import"><span class="emo">📥</span><span class="txt"><span class="t">Import backup</span>' +
+    '<span class="s">Restore from a JSON file</span></span><span class="amt">›</span></button>' +
+    '<button class="row" data-act="reset"><span class="emo">⚠️</span><span class="txt">' +
+    '<span class="t" style="color:var(--spend)">Erase all data</span><span class="s">Cannot be undone</span></span>' +
+    '<span class="amt">›</span></button></div>' +
+    '<p class="hint">Everything is stored on this device only — nothing is uploaded anywhere. ' +
+    'Export a backup before clearing Safari data or switching phones.</p>' +
+    '<p class="hint" style="margin-bottom:30px">Mills Bucks · ' + esc(activeKid().name) + " · " +
+    myEntries().length + " entries logged</p>";
+  return h;
+}
+
+/* ============================ sheets ============================ */
+function sheetQuantity(rule, kind){
+  var qty = 1;
+  var sign = kind === "earn" ? "+" : "−";
+  openSheet(
+    "<h3>" + esc(rule.emoji) + " " + esc(rule.title) + "</h3>" +
+    '<p class="sub">' + mb(rule.amount) + " Mills Bucks · " + usd(rule.amount) + " each</p>" +
+    '<div class="stepper"><button data-q="-1">−</button><span class="q" id="q">1</span><button data-q="1">+</button></div>' +
+    '<label class="field"><span>Note (optional)</span><input id="note" placeholder="e.g. math test, Mrs. Lee"></label>' +
+    '<div class="preview" id="prev"></div>' +
+    (kind === "spend" ? '<div id="warn"></div>' : "") +
+    '<div class="btnrow"><button class="btn ghost" data-act="closesheet">Cancel</button>' +
+    '<button class="btn" id="confirm">' + (kind === "earn" ? "Add" : "Spend") + "</button></div>",
+    function(){
+      var qEl = document.getElementById("q"), prev = document.getElementById("prev");
+      function paint(){
+        qEl.textContent = qty;
+        var tot = Math.round(rule.amount * qty * 100) / 100;
+        prev.innerHTML = (kind === "earn" ? "Adding" : "Spending") + "<b>" + sign + mb(tot) + " MB · " + usd(tot) + "</b>";
+        var w = document.getElementById("warn");
+        if(w){
+          w.innerHTML = tot > balance()
+            ? '<div class="warn">That is more than the current balance of ' + mb(balance()) +
+              " MB. You can still log it — the balance will go negative.</div>" : "";
+        }
+      }
+      paint();
+      document.getElementById("sheet").querySelectorAll("[data-q]").forEach(function(b){
+        b.addEventListener("click", function(){
+          qty = Math.max(1, Math.min(99, qty + parseInt(b.dataset.q, 10)));
+          paint(); buzz(8);
+        });
+      });
+      document.getElementById("confirm").addEventListener("click", function(){
+        var note = document.getElementById("note").value.trim();
+        var e = addEntry(kind, rule.title, Math.round(rule.amount * qty * 100) / 100, rule.emoji, note);
+        e.ruleId = rule.id; save();
+        closeSheet();
+      });
+    }
+  );
+}
+
+function sheetCustom(kind){
+  openSheet(
+    "<h3>" + (kind === "earn" ? "➕ Custom earn" : "🎁 Custom spend") + "</h3>" +
+    '<p class="sub">One-off entry that is not in the catalog.</p>' +
+    '<label class="field"><span>What for?</span><input id="ctitle" placeholder="' +
+      (kind === "earn" ? "e.g. helped a neighbor" : "e.g. bought a skateboard") + '"></label>' +
+    '<label class="field"><span>Mills Bucks</span><input id="camt" type="number" inputmode="decimal" step="0.25" min="0" placeholder="0"></label>' +
+    '<div class="preview" id="prev">Enter an amount<b>—</b></div>' +
+    '<div class="btnrow"><button class="btn ghost" data-act="closesheet">Cancel</button>' +
+    '<button class="btn" id="confirm">Save</button></div>',
+    function(){
+      var amtEl = document.getElementById("camt"), prev = document.getElementById("prev");
+      amtEl.addEventListener("input", function(){
+        var n = parseFloat(amtEl.value);
+        prev.innerHTML = isFinite(n) && n > 0
+          ? (kind === "earn" ? "Adding" : "Spending") + "<b>" + (kind === "earn" ? "+" : "−") + mb(n) + " MB · " + usd(n) + "</b>"
+          : "Enter an amount<b>—</b>";
+      });
+      document.getElementById("ctitle").focus();
+      document.getElementById("confirm").addEventListener("click", function(){
+        var t = document.getElementById("ctitle").value.trim() || (kind === "earn" ? "Bonus" : "Reward");
+        var n = parseFloat(amtEl.value);
+        if(!isFinite(n) || n <= 0){ toast("Enter an amount greater than 0"); return; }
+        addEntry(kind, t, Math.round(n * 100) / 100, kind === "earn" ? "⭐" : "🎁", "");
+        closeSheet();
+      });
+    }
+  );
+}
+
+function sheetEntry(id){
+  var e = S.entries.filter(function(x){ return x.id === id; })[0];
+  if(!e) return;
+  openSheet(
+    "<h3>" + esc(e.emoji) + " " + esc(e.title) + "</h3>" +
+    '<p class="sub">' + (e.kind === "earn" ? "Earned " : "Spent ") + mb(e.amount) + " MB · " + usd(e.amount) +
+      " · " + dayLabel(e.ts) + "</p>" +
+    '<label class="field"><span>Note</span><input id="enote" value="' + esc(e.note || "") + '" placeholder="Optional"></label>' +
+    '<div class="btnrow"><button class="btn" id="savenote">Save note</button></div>' +
+    '<div class="btnrow"><button class="btn danger" id="del">Delete this entry</button></div>',
+    function(){
+      document.getElementById("savenote").addEventListener("click", function(){
+        e.note = document.getElementById("enote").value.trim(); save(); render(); closeSheet();
+      });
+      document.getElementById("del").addEventListener("click", function(){ closeSheet(); deleteEntry(id); });
+    }
+  );
+}
+
+function sheetKid(kid){
+  var isNew = !kid;
+  var k = kid || { id: uid(), name: "", emoji: "⭐" };
+  openSheet(
+    "<h3>" + (isNew ? "Add a kid" : "Edit " + esc(k.name)) + "</h3>" +
+    '<label class="field"><span>Name</span><input id="kname" value="' + esc(k.name) + '" placeholder="First name"></label>' +
+    '<label class="field"><span>Emoji</span><input id="kemoji" value="' + esc(k.emoji) + '" maxlength="4"></label>' +
+    '<div class="btnrow"><button class="btn ghost" data-act="closesheet">Cancel</button>' +
+    '<button class="btn" id="ksave">Save</button></div>' +
+    (isNew || S.kids.length < 2 ? "" :
+      '<div class="btnrow"><button class="btn danger" id="kdel">Remove kid and all entries</button></div>'),
+    function(){
+      document.getElementById("ksave").addEventListener("click", function(){
+        k.name = document.getElementById("kname").value.trim() || "Kid";
+        k.emoji = document.getElementById("kemoji").value.trim() || "⭐";
+        if(isNew){ S.kids.push(k); S.activeKid = k.id; }
+        save(); render(); closeSheet();
+      });
+      var d = document.getElementById("kdel");
+      if(d) d.addEventListener("click", function(){
+        if(!confirm("Remove " + k.name + " and every entry for them? This cannot be undone.")) return;
+        S.kids = S.kids.filter(function(x){ return x.id !== k.id; });
+        S.entries = S.entries.filter(function(x){ return x.kid !== k.id; });
+        S.activeKid = S.kids[0].id;
+        save(); render(); closeSheet();
+      });
+    }
+  );
+}
+
+function sheetRules(kind){
+  var rules = kind === "earn" ? S.earnRules : S.spendRules;
+  openSheet(
+    "<h3>" + (kind === "earn" ? "Earning rules" : "Spending rules") + "</h3>" +
+    '<p class="sub">Tap a rule to change its value, or add your own.</p>' +
+    '<div class="card">' + rules.map(function(r){
+      return '<button class="row" data-act="editrule" data-kind="' + kind + '" data-id="' + r.id + '">' +
+        '<span class="emo">' + esc(r.emoji) + '</span><span class="txt"><span class="t">' + esc(r.title) + "</span>" +
+        '<span class="s">' + usd(r.amount) + "</span></span>" +
+        '<span class="amt ' + kind + '">' + mb(r.amount) + "</span></button>";
+    }).join("") + "</div>" +
+    '<div class="btnrow"><button class="btn" data-act="editrule" data-kind="' + kind + '" data-id="">➕ New rule</button></div>' +
+    '<div class="btnrow"><button class="btn ghost" data-act="closesheet">Done</button></div>'
+  );
+}
+
+function sheetRule(kind, id){
+  var rules = kind === "earn" ? S.earnRules : S.spendRules;
+  var isNew = !id;
+  var r = rules.filter(function(x){ return x.id === id; })[0] ||
+    { id: uid(), title: "", amount: 1, emoji: kind === "earn" ? "⭐" : "🎁", category: S.categories[0].id };
+  var catOpts = S.categories.map(function(c){
+    return '<option value="' + c.id + '"' + (c.id === r.category ? " selected" : "") + ">" + c.emoji + " " + esc(c.name) + "</option>";
+  }).join("");
+  openSheet(
+    "<h3>" + (isNew ? "New rule" : "Edit rule") + "</h3>" +
+    '<label class="field"><span>Name</span><input id="rtitle" value="' + esc(r.title) + '" placeholder="What earns it"></label>' +
+    '<label class="field"><span>Mills Bucks</span><input id="ramt" type="number" inputmode="decimal" step="0.25" min="0" value="' + r.amount + '"></label>' +
+    '<label class="field"><span>Emoji</span><input id="remoji" value="' + esc(r.emoji) + '" maxlength="4"></label>' +
+    (kind === "earn" ? '<label class="field"><span>Category</span><select id="rcat">' + catOpts + "</select></label>" : "") +
+    '<div class="preview" id="rprev"></div>' +
+    '<div class="btnrow"><button class="btn ghost" data-act="closesheet">Cancel</button>' +
+    '<button class="btn" id="rsave">Save</button></div>' +
+    (isNew ? "" : '<div class="btnrow"><button class="btn danger" id="rdel">Delete rule</button></div>'),
+    function(){
+      var amt = document.getElementById("ramt"), prev = document.getElementById("rprev");
+      function paint(){
+        var n = parseFloat(amt.value);
+        prev.innerHTML = "Worth<b>" + (isFinite(n) ? usd(n) : "—") + "</b>";
+      }
+      amt.addEventListener("input", paint); paint();
+      document.getElementById("rsave").addEventListener("click", function(){
+        var n = parseFloat(amt.value);
+        if(!isFinite(n) || n <= 0){ toast("Enter an amount greater than 0"); return; }
+        r.title = document.getElementById("rtitle").value.trim() || "Untitled";
+        r.amount = Math.round(n * 100) / 100;
+        r.emoji = document.getElementById("remoji").value.trim() || "⭐";
+        var c = document.getElementById("rcat"); if(c) r.category = c.value;
+        if(isNew) rules.push(r);
+        save(); render(); sheetRules(kind);
+      });
+      var d = document.getElementById("rdel");
+      if(d) d.addEventListener("click", function(){
+        if(kind === "earn"){ S.earnRules = S.earnRules.filter(function(x){ return x.id !== r.id; }); }
+        else { S.spendRules = S.spendRules.filter(function(x){ return x.id !== r.id; }); }
+        save(); render(); sheetRules(kind);
+      });
+    }
+  );
+}
+
+/* ============================ import / export ============================ */
+function doExport(){
+  var blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "mills-bucks-" + new Date().toISOString().slice(0, 10) + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  toast("Backup downloaded");
+}
+function doImport(){
+  var inp = document.createElement("input");
+  inp.type = "file"; inp.accept = "application/json,.json";
+  inp.addEventListener("change", function(){
+    var f = inp.files && inp.files[0];
+    if(!f) return;
+    var fr = new FileReader();
+    fr.onload = function(){
+      try{
+        var d = JSON.parse(fr.result);
+        if(!d || !Array.isArray(d.kids) || !Array.isArray(d.entries)) throw new Error("bad file");
+        if(!confirm("Replace everything on this device with the backup (" + d.entries.length + " entries)?")) return;
+        S = d; load(); render(); toast("Backup restored");
+      }catch(e){ alert("That file could not be read as a Mills Bucks backup."); }
+    };
+    fr.readAsText(f);
+  });
+  inp.click();
+}
+
+/* ============================ events ============================ */
+function wire(root){
+  var s = document.getElementById("earnsearch");
+  if(s){
+    s.addEventListener("input", function(){
+      earnQuery = s.value;
+      var pos = s.selectionStart;
+      document.getElementById("view").innerHTML = viewEarn();
+      wire(document.getElementById("view"));
+      var ns = document.getElementById("earnsearch");
+      if(ns){ ns.focus(); try{ ns.setSelectionRange(pos, pos); }catch(e){} }
+    });
+  }
+  var rate = document.getElementById("rate");
+  if(rate){
+    rate.addEventListener("change", function(){
+      var n = parseFloat(rate.value);
+      if(isFinite(n) && n > 0){ S.rate = Math.round(n * 100) / 100; save(); render(); toast("1 Mills Buck = " + usd(1)); }
+      else { rate.value = S.rate; }
+    });
+  }
+}
+
+document.addEventListener("click", function(ev){
+  var el = ev.target.closest("[data-act]");
+  if(!el) return;
+  var a = el.dataset.act, id = el.dataset.id, kind = el.dataset.kind;
+  if(a === "tab"){ tab = id; earnQuery = ""; render(); window.scrollTo(0, 0); }
+  else if(a === "kid"){ S.activeKid = id; save(); render(); }
+  else if(a === "earn"){ sheetQuantity(S.earnRules.filter(function(r){ return r.id === id; })[0], "earn"); }
+  else if(a === "spend"){ sheetQuantity(S.spendRules.filter(function(r){ return r.id === id; })[0], "spend"); }
+  else if(a === "custom"){ sheetCustom(kind); }
+  else if(a === "entry"){ sheetEntry(id); }
+  else if(a === "filter"){ histFilter = id; render(); }
+  else if(a === "addkid"){ sheetKid(null); }
+  else if(a === "editkid"){ sheetKid(S.kids.filter(function(k){ return k.id === id; })[0]); }
+  else if(a === "editrules"){ sheetRules(id); }
+  else if(a === "editrule"){ sheetRule(kind, id); }
+  else if(a === "export"){ doExport(); }
+  else if(a === "import"){ doImport(); }
+  else if(a === "reset"){
+    if(confirm("Erase every kid, entry and custom rule on this device?")){
+      try{ localStorage.removeItem(KEY); }catch(e){}
+      S = null; load(); tab = "home"; render(); toast("All data erased");
+    }
+  }
+  else if(a === "closesheet"){ closeSheet(); }
+});
+
+/* ============================ boot ============================ */
+load();
+render();
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){ /* offline support unavailable; app still runs */ });
+  });
+}
+})();
+</script>
+</body>
+</html>
