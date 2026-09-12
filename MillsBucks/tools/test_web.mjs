@@ -32,7 +32,16 @@ const ctx = await browser.newContext({ ...devices["iPhone 13"], isMobile: true, 
 const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", e => errors.push("pageerror: " + e.message));
-page.on("console", m => { if (m.type() === "error") errors.push("console.error: " + m.text()); });
+const FONT_HOST = /fonts\.(googleapis|gstatic)\.com/;
+let fontBlocked = false;
+page.on("requestfailed", r => { if (FONT_HOST.test(r.url())) fontBlocked = true; });
+page.on("console", m => {
+  if (m.type() !== "error") return;
+  // network errors carry no URL in the console text, so drop resource-load failures
+  // only when a font request is known to have failed in this sandbox
+  if (fontBlocked && /Failed to load resource/.test(m.text())) return;
+  errors.push("console.error: " + m.text());
+});
 
 const bal = () => page.locator("#bal .num").innerText();
 const usd = () => page.locator("#bal .usd").innerText();
@@ -62,7 +71,7 @@ await page.click('[data-act="earn"][data-id="a_test_a"]');
 await page.waitForSelector(".sheet.on");
 await page.click('[data-q="1"]');
 check("stepper reads 2", await page.locator("#q").innerText(), "2");
-check("preview totals 8 MB", await page.locator("#prev").innerText().then(t => t.replace(/\s+/g," ")), "Adding +8 MB · $18.00");
+check("preview totals 8 MB", await page.locator("#prev").innerText().then(t => t.replace(/\s+/g," ").toUpperCase()), "ADDING +8 MB · $18.00");
 await page.fill("#note", "science unit 3");
 await page.click("#confirm");
 await sheetGone();
@@ -167,6 +176,52 @@ await page.click('[data-act="kid"] >> nth=0');
 await page.waitForTimeout(120);
 check("switching back restores balance", await bal(), "91");
 
+console.log("\n-- backup round trip --");
+await goTab("settings");
+const [download] = await Promise.all([
+  page.waitForEvent("download"),
+  page.click('[data-act="export"]'),
+]);
+let backup = "";
+for await (const chunk of await download.createReadStream()) backup += chunk;
+const parsed = JSON.parse(backup);
+check("export carries every entry", parsed.entries.length, 6);
+check("export carries both kids", parsed.kids.length, 2);
+check("export filename is dated", /^mills-bucks-\d{4}-\d{2}-\d{2}\.json$/.test(download.suggestedFilename()), "true");
+
+page.once("dialog", d => d.accept());          // "erase every kid, entry and rule?"
+await page.click('[data-act="reset"]');
+await page.waitForTimeout(250);
+check("erase returns to zero", await bal(), "0");
+check("erase clears the ledger", await page.evaluate(() => JSON.parse(localStorage.getItem("millsbucks.v1")).entries.length), 0);
+
+// restore through the paste path, which is the only route on hosts that sandbox file pickers
+await goTab("settings");
+await page.click('[data-act="import"]');
+await page.waitForSelector(".sheet.on");
+await page.fill("#pastebkp", backup);
+page.once("dialog", d => d.accept());          // "replace everything with the backup?"
+await page.click("#restorebkp");
+await sheetGone();
+check("restore brings the balance back", await bal(), "91");
+check("restore brings the ledger back", await page.evaluate(() => JSON.parse(localStorage.getItem("millsbucks.v1")).entries.length), 6);
+await page.reload({ waitUntil: "networkidle" });
+check("restored data survives reload", await bal(), "91");
+
+console.log("\n-- malformed backup is refused --");
+await goTab("settings");
+await page.click('[data-act="import"]');
+await page.waitForSelector(".sheet.on");
+await page.fill("#pastebkp", '{"nope":true}');
+let alerted = "";
+page.once("dialog", d => { alerted = d.message(); d.accept(); });
+await page.click("#restorebkp");
+await page.waitForTimeout(250);
+check("non-backup JSON is rejected", /not a Mills Bucks backup/.test(alerted), "true");
+check("ledger untouched after a bad import", await bal(), "91");
+await page.click('[data-act="closesheet"]');
+await sheetGone();
+
 console.log("\n-- service worker --");
 const swOK = await page.evaluate(() => navigator.serviceWorker.getRegistration().then(r => !!r));
 check("service worker registered", swOK, "true");
@@ -179,7 +234,24 @@ await page.screenshot({ path: path.join(here, "..", "docs", "shot-earn.png") });
 await goTab("history");
 await page.screenshot({ path: path.join(here, "..", "docs", "shot-history.png") });
 
+// dark theme: the viewer's OS setting, which stamps nothing on the root element
+const dark = await ctx.newPage();
+await dark.emulateMedia({ colorScheme: "dark" });
+await dark.goto(URL_, { waitUntil: "networkidle" });
+await dark.screenshot({ path: path.join(here, "..", "docs", "shot-dark.png") });
+const darkBg = await dark.evaluate(() => getComputedStyle(document.body).backgroundColor);
+check("dark theme repaints the body ground", darkBg, "rgb(15, 21, 18)");
+await dark.close();
+
 check("no JS errors", errors.length ? errors.join(" | ") : 0, 0);
+if (fontBlocked) console.log("  note: fonts.googleapis.com unreachable in this sandbox; rendered with fallback stack");
+const stacks = await page.evaluate(() => {
+  const cs = getComputedStyle(document.body);
+  const num = getComputedStyle(document.querySelector("#bal .num"));
+  return { ui: cs.fontFamily, display: num.fontFamily };
+});
+check("body font declares a real fallback", /Public Sans/.test(stacks.ui) && /(-apple-system|Helvetica|Arial)/.test(stacks.ui), "true");
+check("balance font declares a real fallback", /Bodoni Moda/.test(stacks.display) && /(Georgia|serif)/.test(stacks.display), "true");
 
 await browser.close();
 server.close();

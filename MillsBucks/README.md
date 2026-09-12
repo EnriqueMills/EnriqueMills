@@ -11,16 +11,17 @@ There are two builds of the same app from the same scoring data:
 | Needs a Mac | No | Yes |
 | Needs an Apple Developer account | No | Free account works, re-sign every 7 days |
 | Works offline | Yes (service worker) | Yes |
-| Verified | 34 automated UI checks pass | **Not compiled — see Status** |
+| Verified | 47 automated UI checks pass | **Not compiled — see Status** |
 
 Both store data **only on the device**. Nothing is uploaded, there is no account,
 and there is no network call of any kind.
 
 ## Status, honestly
 
-The web app is tested: 34 end-to-end checks drive a real browser at iPhone
-viewport size and assert the arithmetic, persistence, multi-kid isolation, and
-undo behaviour. Run them with `node tools/test_web.mjs`.
+The web app is tested: 47 end-to-end checks drive a real browser at iPhone
+viewport size and assert the arithmetic, persistence, multi-kid isolation, undo,
+both colour themes, and the backup round trip. Run them with
+`node tools/test_web.mjs`.
 
 The iOS app has **never been compiled** — it was written on Linux, where no Swift
 toolchain or Xcode exists. The project file is machine-generated and validated
@@ -30,15 +31,30 @@ Expect to fix a compile error or two on first build.
 
 ## Install the web app on your iPhone
 
-1. Host `web/` anywhere that serves HTTPS, or open the published link.
+A hosted copy is published at
+<https://claude.ai/code/artifact/5d402edd-2862-42f0-97f9-26f3a9336769> (private to
+the account that published it). It is the same app built by
+`tools/build_artifact.py`, minus the service worker and manifest, which a
+single hosted page has nothing to point at.
+
+To install your own copy:
+
+1. Host `web/` anywhere that serves HTTPS (GitHub Pages, Netlify, a Raspberry Pi).
 2. Open it in **Safari** (not Chrome — only Safari can install to the Home Screen).
 3. Tap **Share** → **Add to Home Screen** → **Add**.
+
+Self-hosting is what gets you the real thing: your own icon on the Home Screen,
+a proper app name, and offline support through the service worker.
 
 It then launches full-screen with its own icon, no browser chrome, and works
 offline. Data lives in Safari's storage for that site, so:
 
 - **Do not** use "Clear History and Website Data" without exporting a backup first.
 - Settings → Export backup writes a JSON file you can restore on another phone.
+
+Export adapts to where the page is running: a normal host downloads the file, a
+sandboxed host that blocks file saves shows the backup as copyable text instead.
+Import takes either a file or pasted text, so the round trip works everywhere.
 
 ## Build the iOS app
 
@@ -166,8 +182,10 @@ web/
 ios/
   MillsBucks.xcodeproj/      generated; regenerate with tools/gen_xcodeproj.py
   MillsBucks/*.swift         SwiftUI app, iOS 16+
+build/                       derived; not committed
 tools/
   gen_catalog.py             scoring.json -> Catalog.swift + web/index.html
+  build_artifact.py          web/index.html -> the hosted single-page build
   gen_xcodeproj.py           rebuild the Xcode project after adding a .swift file
   validate_pbxproj.py        parse the project file, check every reference
   test_web.mjs               34 end-to-end checks against real Chromium
@@ -178,6 +196,11 @@ docs/                        screenshots from the test run
 ## Running the checks
 
 ```sh
-node tools/test_web.mjs          # web app, 34 assertions, needs Chromium
+node tools/test_web.mjs           # web app, 47 assertions, needs Chromium
 python3 tools/validate_pbxproj.py # Xcode project integrity
 ```
+
+`test_web.mjs` serves `web/` on a local port and drives it with Playwright's
+bundled Chromium at iPhone 13 viewport size. Google Fonts is unreachable from
+some sandboxes; the run says so and asserts the fallback stacks instead of
+failing.
