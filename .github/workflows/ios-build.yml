@@ -1,0 +1,42 @@
+# Compiles the SwiftUI app on a macOS runner so the project is checked by a real
+# Swift compiler. Simulator destination with signing off, so it needs no Apple ID,
+# no certificate and no device.
+name: iOS build
+
+on:
+  push:
+    paths:
+      - "MillsBucks/ios/**"
+      - ".github/workflows/ios-build.yml"
+  pull_request:
+    paths:
+      - "MillsBucks/ios/**"
+      - ".github/workflows/ios-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build for iOS Simulator
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i iphoneos || true
+
+      - name: Validate the generated project file
+        run: python3 MillsBucks/tools/validate_pbxproj.py
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project MillsBucks/ios/MillsBucks.xcodeproj \
+            -scheme MillsBucks \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
