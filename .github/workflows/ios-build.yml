@@ -4,7 +4,10 @@
 name: iOS build
 
 on:
+  # Branch pushes are covered by the pull_request event, so pushes are limited to
+  # the default branch — otherwise every commit on an open PR builds twice.
   push:
+    branches: [main]
     paths:
       - "MillsBucks/ios/**"
       - ".github/workflows/ios-build.yml"

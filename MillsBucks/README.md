@@ -11,7 +11,7 @@ There are two builds of the same app from the same scoring data:
 | Needs a Mac | No | Yes |
 | Needs an Apple Developer account | No | Free account works, re-sign every 7 days |
 | Works offline | Yes (service worker) | Yes |
-| Verified | 47 automated UI checks pass | **Not compiled — see Status** |
+| Verified | 47 automated UI checks pass | Compiles clean in CI; **never run** — see Status |
 
 Both store data **only on the device**. Nothing is uploaded, there is no account,
 and there is no network call of any kind.
@@ -23,11 +23,24 @@ viewport size and assert the arithmetic, persistence, multi-kid isolation, undo,
 both colour themes, and the backup round trip. Run them with
 `node tools/test_web.mjs`.
 
-The iOS app has **never been compiled** — it was written on Linux, where no Swift
-toolchain or Xcode exists. The project file is machine-generated and validated
-structurally (`python3 tools/validate_pbxproj.py` parses it and checks every
-object reference resolves), but "the project opens" is not "the code builds".
-Expect to fix a compile error or two on first build.
+The iOS app **compiles, but has never been run.** It was written on Linux, where
+no Swift toolchain or Xcode exists, so for a while nothing had type-checked it at
+all. `.github/workflows/ios-build.yml` now builds it on a GitHub-hosted macOS
+runner on every push touching `MillsBucks/ios`, and it comes back clean:
+
+- Xcode 26.6, iPhoneSimulator 26.5 SDK, `-target …-ios16.0-simulator`
+- both the arm64 and x86_64 simulator slices
+- 12 Swift files compiled, linked, `lipo`'d, bundle validated
+- `** BUILD SUCCEEDED **`, zero errors
+
+Hold that result at its actual weight. It proves the code is syntactically and
+type-correct and that the generated `.xcodeproj` is sound. It proves **nothing
+about behaviour**: no one has launched this app, tapped a button, or checked that
+a Mills Buck lands in the ledger. The web app has 47 assertions about what it
+actually does; the iOS app has a compile check. Those are not the same claim.
+
+The first person to run it in a simulator should expect runtime problems the
+compiler cannot see — layout, navigation, a sheet that does not dismiss.
 
 ## Install the web app on your iPhone
 
